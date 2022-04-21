@@ -28,7 +28,7 @@ io.on('connection', (socket) => {
       socket.user = users[hash(credentials)]
       socket.emit('login-confirm', 'Login successful');
     } else {
-      socket.emit('login-response', 'Login failed');
+      socket.emit('error-message', 'Login failed. Incorrect Username or password.');
     }
   });
 
@@ -38,23 +38,31 @@ io.on('connection', (socket) => {
   });
 
   socket.on('create-account', (credentials) => {
-    users[hash(credentials)] = {
-      username: credentials.username,
-      password: credentials.password,
-      listData: {
-        currentList: 0,
-        itemLists: [],
-        listTitles: [],
-        darkmode: false
-      },
-      dateCreated: Date.now()
+    if (users[hash(credentials)]) {
+      socket.emit('error-message', 'That account already exists.');
+    } else {
+      users[hash(credentials)] = {
+        username: credentials.username,
+        password: credentials.password,
+        listData: {
+          currentList: 0,
+          itemLists: [],
+          listTitles: [],
+          darkmode: false
+        },
+        dateCreated: Date.now()
+      }
+      console.log('Account created.');
     }
-    console.log('Account created.');
   });
 
   socket.on('load', () => {
     socket.emit('data', socket.user.listData);
     console.log('Data sent.');
+  });
+
+  socket.on('save', (data) => {
+    socket.user.listData = data;
   });
 });
 
