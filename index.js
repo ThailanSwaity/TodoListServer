@@ -3,6 +3,7 @@ const app = express();
 const http = require('http');
 const server = http.createServer(app);
 const { Server } = require("socket.io");
+const fs = require('fs');
 const io = new Server(server, {
   cors: {
     origin: '*',
@@ -13,7 +14,22 @@ const cors = require('cors');
 
 app.use(cors());
 
-var users = [];
+// Users is an object to allow for named indexing
+var users = {};
+
+var changesSaved = true;
+var currentUsers = 0;
+
+// Loads user data from file using the fs module
+try {
+  if (fs.existsSync('./account-data.json')) {
+    let userData = fs.readFileSync('account-data.json');
+    users = JSON.parse(userData);
+    console.log('User data loaded.');
+  }
+} catch(err) {
+  console.error(err);
+}
 
 function hash(credentials) {
   return `${credentials.username},${credentials.password}`;
@@ -23,9 +39,9 @@ io.on('connection', (socket) => {
   console.log('a user connected');
 
   socket.on('Login', (credentials) => {
-    console.log(credentials);
     if (users[hash(credentials)]) {
       socket.user = users[hash(credentials)]
+      currentUsers++;
       socket.emit('login-confirm', 'Login successful');
     } else {
       socket.emit('error-message', 'Login failed. Incorrect Username or password.');
@@ -34,6 +50,7 @@ io.on('connection', (socket) => {
 
   socket.on('Logout', () => {
     socket.user = {};
+    currentUsers--;
     console.log('a user logged out');
   });
 
@@ -63,10 +80,25 @@ io.on('connection', (socket) => {
 
   socket.on('save', (data) => {
     socket.user.listData = data;
+    changesSaved = false;
   });
 });
 
 const PORT = 8080;
+
+// Writes to a file called account-data.json every minute
+// The json is made to be readable by humnans for debugging
+setInterval(function() {
+  if (!changesSaved) {
+    let data = JSON.stringify(users, null, 2);
+    fs.writeFileSync('account-data.json', data);
+    changesSaved = true;
+    console.log('Data saved.');
+  } else {
+    console.log('No changes to be saved.');
+  }
+  console.log(`${currentUsers} ${(currentUsers == 1) ? 'user' : 'users' } connected.`);
+}, 60000);
 
 server.listen(PORT, () => {
   console.log(`listening on *:${PORT}`);
