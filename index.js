@@ -70,6 +70,7 @@ io.on('connection', (socket) => {
         dateCreated: Date.now()
       }
       console.log('Account created.');
+      socket.emit('confirmation', 'Accounted created successfully.');
     }
   });
 
@@ -97,6 +98,7 @@ setInterval(function() {
   } else {
     console.log('No changes to be saved.');
   }
+  if (currentUsers < 0) currentUsers = 0;
   console.log(`${currentUsers} ${(currentUsers == 1) ? 'user' : 'users' } connected.`);
 }, 60000);
 
